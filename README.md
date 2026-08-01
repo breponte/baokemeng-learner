@@ -23,7 +23,9 @@ __Bǎokěmèng Learner__ uses [sherpa-onnx](https://github.com/k2-fsa/sherpa-onn
 
 ### Translation
 
-__Bǎokěmèng Learner__ uses [Baidu Translation](https://fanyi-api.baidu.com) for the _Chinese to English translation_. This tool is run via API requests with a limited rate of ~50,000 word. The text from the OCR tool will serve as input to the Baidu Translation for translation via API call.
+__Bǎokěmèng Learner__ uses [Google Cloud Translation](https://docs.cloud.google.com/translate) for the _Chinese to English translation_. This tool is run via API requests with a limited rate of ~500,000 word. The text from the OCR tool will serve as input to the Google Cloud Translation for translation via API call.
+
+The alternative was Baidu Translation, but a Chinese phone number is required.
 
 ### Screen Overlay
 
