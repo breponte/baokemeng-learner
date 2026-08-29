@@ -1,3 +1,5 @@
 .env
-tts/models
-tts/output
+tts/models/*
+tts/output/*
+ocr/capture/*
+ocr/output/*

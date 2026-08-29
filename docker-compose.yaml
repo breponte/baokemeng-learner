@@ -1,4 +1,26 @@
 services:
+  ocr:
+    build:
+      context: .
+      dockerfile: ocr/Dockerfile
+    networks:
+      - app-net
+    volumes:
+      # Drop images here for the OCR service to process
+      - ./ocr/capture:/ocr/capture
+      # Resulting JSON files appear here
+      - ./ocr/output:/ocr/output
+    environment:
+      - OCR_CAPTURE_DIR=/ocr/capture
+      - OCR_OUTPUT_DIR=/ocr/output
+      - OCR_DET_MODEL_DIR=/models/ch_PP-OCRv4_det_infer
+      - OCR_REC_MODEL_DIR=/models/ch_PP-OCRv4_rec_infer
+      - OCR_CLS_MODEL_DIR=
+      - OCR_REC_CHAR_DICT=/models/ppocr_keys_v1.txt
+      - OCR_POLL_INTERVAL_MS=500
+      - OCR_USE_GPU=0
+    restart: unless-stopped
+
   translate:
     build:
       context: .
