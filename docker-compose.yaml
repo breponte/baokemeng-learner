@@ -1,18 +1,20 @@
 services:
   translate:
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli
+    build:
+      context: .
+      dockerfile: translate/Dockerfile
+    stdin_open: true
+    tty: true
     networks:
       - app-net
     environment:
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
     volumes:
-      - .:/app
       - gcloud-config:/root/.config/gcloud
-    working_dir: /app
     command: |
       bash -c "
-        apt-get install -y -qq golang &&
-        GCP_ACCESS_TOKEN=$$(gcloud auth application-default print-access-token) go run ./translate/
+        echo 'Fetching access token...' &&
+        GCP_ACCESS_TOKEN=$$(gcloud auth application-default print-access-token) translate
       "
     healthcheck:
       test: >
