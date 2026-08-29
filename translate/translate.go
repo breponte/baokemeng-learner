@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type Post struct {
@@ -37,13 +39,23 @@ func main() {
 	// HTTP endpoint
 	posturl := "https://translation.googleapis.com/language/translate/v2"
 
+	// Read text from STDIN
+	fmt.Fprint(os.Stderr, "Enter text to translate: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	inputText := strings.TrimSpace(scanner.Text())
+
 	// JSON body
-	body := []byte(`{
-		"q": "The Great Pyramid of Giza (also known as the Pyramid of Khufu or the Pyramid of Cheops) is the oldest and largest of the three pyramids in the Giza pyramid complex.",
-		"source": "en",
-		"target": "es",
-		"format": "text"
-	}`)
+	post := Post{
+		Q:      inputText,
+		Source: "en",
+		Target: "zh",
+		Format: "text",
+	}
+	body, err := json.Marshal(post)
+	if err != nil {
+		panic(err)
+	}
 
 	// Create a HTTP post request
 	r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(body))

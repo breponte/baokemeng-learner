@@ -1,40 +1,49 @@
 services:
-#  google-cloud-cli:
-#    image: gcr.io/google.com/cloudsdktool/google-cloud-cli
-#    networks:
-#      - app-net
-#    volumes:
-#      - .:/app
-#    working_dir: /app
-#    command: gcloud init && gcloud auth application-default login
-
   translate:
-    image: golang:tip-trixie
+    build:
+      context: .
+      dockerfile: translate/Dockerfile
+    stdin_open: true
+    tty: true
     networks:
       - app-net
     environment:
-      - GCP_ACCESS_TOKEN=${GCP_ACCESS_TOKEN}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
     volumes:
-      - .:/app
-    working_dir: /app
-    command: go run ./translate/
+      - gcloud-config:/root/.config/gcloud
+    command: |
+      bash -c "
+        echo 'Fetching access token...' &&
+        GCP_ACCESS_TOKEN=$$(gcloud auth application-default print-access-token) translate
+      "
     healthcheck:
-      test: |
-        curl \
-          -H "Authorization: Bearer $$GCP_ACCESS_TOKEN" \
-          -H "x-goog-user-project: $$GCP_PROJECT_ID" \
-          -H "Content-Type: application/json" \
-          https://translation.googleapis.com/language/translate/v2 \
-          -d '{"q":"Hello","target":"es"}'
+      test: >
+        bash -c "
+          curl \
+            -H \"Authorization: Bearer $$(gcloud auth application-default print-access-token)\" \
+            -H \"x-goog-user-project: $$GCP_PROJECT_ID\" \
+            -H \"Content-Type: application/json\" \
+            https://translation.googleapis.com/language/translate/v2 \
+            -d '{\"q\":\"Hello\",\"target\":\"es\"}'
+        "
       interval: 10s
       timeout: 3s
       retries: 10
       start_period: 30s
-#    depends_on:
-#      google-cloud-cli:
-#        condition: service_completed_successfully
+
+  translate-login:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli
+    networks:
+      - app-net
+    volumes:
+      - gcloud-config:/root/.config/gcloud
+    stdin_open: true
+    tty: true
+    command: gcloud auth application-default login
 
 networks:
   app-net:
     driver: bridge
+
+volumes:
+  gcloud-config:
