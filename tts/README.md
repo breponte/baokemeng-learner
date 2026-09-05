@@ -1,105 +1,96 @@
-# Text-to-Speech (TTS)
+# TTS Service
 
-Chinese text-to-speech powered by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) with a VITS model.
-The service reads one line of Chinese text from STDIN and writes a 16-bit mono WAV file.
+Converts Chinese text to speech locally using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) and a [Piper VITS Chinese model](https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/vits-piper-zh_CN-chaowen-medium.html). The sample program in `tts.cpp` loads the model via the [sherpa-onnx C++ API](https://k2-fsa.github.io/sherpa/onnx/tts/index.html), synthesizes audio, and writes a WAV file (`test.wav`).
 
 ---
 
-## How it works
+## Overview
 
-1. A line of Chinese text is written to the service's STDIN.
-2. `tts` synthesises the audio using a VITS ONNX model.
-3. The resulting WAV file is written to `/output/output.wav` inside the container, which is bind-mounted to `tts/output/` on the host.
+This service is the text-to-speech stage of Bǎokěmèng Learner: Chinese text (for example from OCR) is spoken with an offline neural TTS engine. Inference runs entirely on-device through [sherpa-onnx](https://k2-fsa.github.io/sherpa/onnx/) — no cloud TTS API is required.
+
+The current demo uses the **vits-piper-zh_CN-chaowen-medium** model, which includes a lexicon and rule FSTs for phone numbers, dates, and numerals. See the [model sample page](https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/vits-piper-zh_CN-chaowen-medium.html) for the official config and download link.
+
+---
+
+## How it Works
+
+1. `tts.cpp` builds an [`OfflineTtsConfig`](https://k2-fsa.github.io/sherpa/onnx/tts/index.html) pointing at the ONNX model, lexicon, tokens, and rule FSTs under `model/`.
+2. [`OfflineTts::Create`](https://github.com/k2-fsa/sherpa-onnx) loads the shared sherpa-onnx libraries and validates that every configured path exists.
+3. [`Generate`](https://k2-fsa.github.io/sherpa/onnx/tts/index.html) turns the input Chinese string into PCM samples (with an optional progress callback).
+4. [`WriteWave`](https://k2-fsa.github.io/sherpa/onnx/tts/index.html) saves the samples to `./test.wav` at the model’s native sample rate.
+
+Paths in `tts.cpp` are relative to the `tts/` working directory. If create fails (for example a missing `.fst`), generation returns empty audio and the WAV may report an invalid sample rate.
 
 ---
 
 ## Setup
 
-### Prerequisites
+Run all commands from the `tts/` directory.
 
-- [Docker](https://docs.docker.com/get-docker/) with the Compose plugin
+### 1. Install and extract the model
 
-### Build the image
+Download the official release archive and unpack it into `model/` so the layout matches the paths in `tts.cpp`:
 
-Run from the repo root:
-
-```
-docker compose build tts
-```
-
-### Download the model
-
-The service does **not** bundle a model — you must download one into `tts/models/` before the first run.
-
-Run from the repo root:
-
-```
-docker compose run --rm --entrypoint="" tts sh -c "
-  mkdir -p /models &&
-  wget -O /models/vits-piper-zh_CN-huayan-medium.tar.bz2
-    'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-zh_CN-huayan-medium.tar.bz2' &&
-  tar -xjf /models/vits-piper-zh_CN-huayan-medium.tar.bz2 -C /models/ &&
-  rm /models/vits-piper-zh_CN-huayan-medium.tar.bz2
-"
+```bash
+mkdir -p model
+cd model
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-zh_CN-chaowen-medium.tar.bz2
+tar xf vits-piper-zh_CN-chaowen-medium.tar.bz2
+cd ..
 ```
 
-This runs the download and extraction entirely inside the container, so no host-side tools (`wget`, `bzip2`, `tar`) are required.
+`wget` fetches the model tarball from the [sherpa-onnx TTS model releases](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models). `tar xf` extracts `vits-piper-zh_CN-chaowen-medium/` (ONNX weights, `lexicon.txt`, `tokens.txt`, and `phone.fst` / `date.fst` / `number.fst`) under `model/`.
 
-After extraction `tts/models/` on the host should contain:
+After extraction you should have:
 
+```text
+model/vits-piper-zh_CN-chaowen-medium/
+  zh_CN-chaowen-medium.onnx
+  lexicon.txt
+  tokens.txt
+  phone.fst
+  date.fst
+  number.fst
+  ...
 ```
-tts/models/
-└── vits-piper-zh_CN-huayan-medium/
-    ├── zh_CN-huayan-medium.onnx
-    ├── zh_CN-huayan-medium.onnx.json
-    ├── tokens.txt
-    ├── MODEL_CARD
-    └── espeak-ng-data/
+
+### 2. Compile
+
+Link against the installed sherpa-onnx shared libraries:
+
+```bash
+g++ -std=c++17 \
+  -I ./sherpa-onnx/shared/include \
+  -L ./sherpa-onnx/shared/lib \
+  -o ./tts ./tts.cpp \
+  -lsherpa-onnx-cxx-api \
+  -lsherpa-onnx-c-api \
+  -lonnxruntime \
+  -Wl,-rpath,'$ORIGIN/sherpa-onnx/shared/lib'
 ```
+
+`-I` / `-L` locate the [C++ API headers](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/c-api/cxx-api.h) and shared libraries. `-l…` links sherpa-onnx and ONNX Runtime. `-Wl,-rpath,'$ORIGIN/…'` embeds a runtime search path so `./tts` finds the `.so` files next to the binary without setting `LD_LIBRARY_PATH`.
+
+### 3. Run
+
+```bash
+./tts
+```
+
+This loads the model, synthesizes the sample Chinese text in `tts.cpp`, and writes `./test.wav`. You can inspect the result with `ffprobe test.wav` or any audio player.
 
 ---
 
-## Usage
+## Resources
 
-```
-# Pipe Chinese text in; WAV is written to tts/output/output.wav on the host
-echo "你好，世界！" | docker compose run --rm -T tts
+### sherpa-onnx
 
-# Pipe WAV bytes directly to stdout (e.g. to play immediately)
-echo "今天天气很好。" | docker compose run --rm -T tts -
-```
+[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) is an open-source speech toolkit (ASR, TTS, VAD, and more) that runs ONNX models locally with [ONNX Runtime](https://onnxruntime.ai/). For this project it provides the offline TTS C/C++ API used by `tts.cpp`.
 
----
-
-## Environment variables
-
-| Variable            | Default                                   | Description                                                        |
-|---------------------|-------------------------------------------|--------------------------------------------------------------------|
-| `SHERPA_VITS_MODEL` | `.../zh_CN-huayan-medium.onnx`            | Path to the VITS `.onnx` model file (required)                     |
-| `SHERPA_TOKENS`     | `.../tokens.txt`                          | Path to the tokens file (required)                                 |
-| `SHERPA_LEXICON`    | _(empty)_                                 | Lexicon path — set for lexicon-based models, leave empty for Piper |
-| `SHERPA_DATA_DIR`   | `.../espeak-ng-data`                      | espeak-ng data dir — set for Piper models, leave empty otherwise   |
-| `SHERPA_SPEED`      | `1.0`                                     | Speaking speed (lower = slower)                                    |
-| `SHERPA_SPEAKER_ID` | `0`                                       | Speaker ID for multi-speaker models                                |
-
-Defaults are configured in `docker-compose.yaml` and match the `vits-piper-zh_CN-huayan-medium` model layout above.
-
----
-
-## Future integration with the `translate` service
-
-The `tts` service is on the same Docker network (`app-net`) as `translate`.
-When the pipeline is connected, the `translate` service will pipe its Chinese
-output directly to this service's STDIN — no network port changes needed.
-
-Planned flow:
-
-```
-User STDIN → translate (EN→ZH) → tts STDIN → output.wav
-```
-
----
-
-## TODO
-
-- Connect STDIN of `tts` to STDOUT of `translate` to form an end-to-end pipeline
+| Resource | Description |
+|---|---|
+| [sherpa-onnx GitHub](https://github.com/k2-fsa/sherpa-onnx) | Source code, issues, and releases |
+| [sherpa-onnx documentation](https://k2-fsa.github.io/sherpa/onnx/) | Official docs for install, APIs, and examples |
+| [TTS documentation](https://k2-fsa.github.io/sherpa/onnx/tts/index.html) | Offline TTS overview and usage |
+| [vits-piper-zh_CN-chaowen-medium](https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/vits-piper-zh_CN-chaowen-medium.html) | Model page with sample config and download |
+| [TTS model releases](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) | Prebuilt model archives hosted by the project |
