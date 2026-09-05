@@ -3,3 +3,6 @@ tts/model/*
 tts/output/*
 ocr/capture/*
 ocr/output/*
+venv
+ocr/input/*
+ocr/output/*
