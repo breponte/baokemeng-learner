@@ -1,5 +1,5 @@
 .env
-tts/model/vits-piper-zh_CN-chaowen-medium/
+tts/model/*
 tts/output/*
 ocr/capture/*
 ocr/output/*
