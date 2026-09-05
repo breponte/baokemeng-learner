@@ -14,8 +14,8 @@ The current prototype uses **PP-OCRv6 medium** detection and recognition with `l
 
 ## How it Works
 
-1. `ocr.py` constructs a [`PaddleOCR`](https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html) pipeline with orientation / unwarping / textline orientation disabled, `device="gpu:0"`, `engine="onnxruntime"`, and `lang="ch"`.
-2. [`predict`](https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html) runs detection and recognition on `./input/general_ocr_002.png` (paths are relative to the `ocr/` working directory).
+1. `ocr.py` constructs a [PaddleOCR](https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html) pipeline with orientation / unwarping / textline orientation disabled, `device="gpu:0"`, `engine="onnxruntime"`, and `lang="ch"`.
+2. `predict` runs detection and recognition on `./input/general_ocr_002.png` (paths are relative to the `ocr/` working directory).
 3. For each result, `print()` dumps recognized lines; `save_to_img` / `save_to_json` write annotated images and structured results into `output/`.
 
 On first run, PP-OCRv6 ONNX model archives are fetched automatically. If CUDA / cuDNN are unavailable, ONNX Runtime may fall back to CPU while still completing inference.
@@ -24,43 +24,82 @@ On first run, PP-OCRv6 ONNX model archives are fetched automatically. If CUDA / 
 
 ## Setup
 
-Run all commands from the `ocr/` directory. Python 3.10+ is assumed (the prototype was developed on 3.10).
+Run all Docker commands from the project root (`baokemeng-learner/`).
 
-### 1. Create and activate a virtualenv
+Python 3.10+ is used by the OCR container. You do **not** need to create a local Python virtual environment or install the OCR dependencies on your host.
+
+### 1. Build the OCR container
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+docker compose build ocr
 ```
 
-`python3 -m venv venv` creates an isolated environment under `ocr/venv/` (gitignored). `source venv/bin/activate` puts that environment’s `python` / `pip` on your `PATH` for the rest of the session.
+This builds the OCR image using `ocr/Dockerfile`. The image installs the required Python dependencies, including `onnxruntime-gpu` and `paddleocr`, along with the Linux libraries required by OpenCV.
 
-### 2. Install dependencies
+### 2. Add a sample input image
+
+Create the input and output directories if they do not already exist:
 
 ```bash
-python3 -m pip install onnxruntime-gpu
-pip install paddleocr
+mkdir -p ocr/input ocr/output
 ```
 
-`onnxruntime-gpu` provides the ONNX Runtime backend used by `engine="onnxruntime"` (CPU-only `onnxruntime` also works if you do not need a GPU build). `paddleocr` pulls in PaddleX OCR core packages used by `ocr.py`. This prototype does **not** install `paddlepaddle`; keep `engine="onnxruntime"` so the default Paddle static engine is not required.
-
-### 3. Add a sample input image
+Download the sample image:
 
 ```bash
-mkdir -p input output
-wget -O input/general_ocr_002.png \
+wget -O ocr/input/general_ocr_002.png \
   https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_ocr_002.png
 ```
 
-`ocr.py` currently expects `./input/general_ocr_002.png`. Create `output/` as well so save helpers have a destination directory.
+The Docker Compose configuration mounts these directories into the container:
 
-### 4. Run
-
-```bash
-python3 ocr.py
+```text
+Host             Container
+ocr/input/  →    /app/input/
+ocr/output/ →    /app/output/
 ```
 
-This loads (or downloads) the PP-OCRv6 ONNX models, runs OCR on the sample boarding-pass image, prints results, and writes files such as `output/general_ocr_002_ocr_res_img.png` and `output/general_ocr_002_res.json`.
+Therefore, files written to `/app/output/` by `ocr.py` are persisted in `ocr/output/` on the host.
+
+### 3. Run OCR
+
+```bash
+docker compose up ocr
+```
+
+This starts the OCR container using the image built in the previous step.
+
+`ocr.py` expects the input image at:
+
+```text
+/app/input/general_ocr_002.png
+```
+
+It loads (or downloads) the PP-OCRv6 ONNX models, runs OCR on the sample boarding-pass image, prints the results, and writes files to the mounted `ocr/output` directory.
+
+### 4. Rebuild after changing the Dockerfile
+
+If you modify `ocr/Dockerfile`, rebuild the image:
+
+```bash
+docker compose build ocr
+```
+
+Then start the service again:
+
+```bash
+docker compose up ocr
+```
+
+If you need to ensure Docker completely rebuilds the image without using cached layers:
+
+```bash
+docker compose build --no-cache ocr
+```
+
+### 5. Stopping the container
+
+Press `Ctrl+C` while `docker compose up` is running to stop the service.
 
 ---
 
