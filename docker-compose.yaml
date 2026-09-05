@@ -64,25 +64,7 @@ services:
     command: gcloud auth application-default login
 
   tts:
-    build:
-      context: .
-      dockerfile: tts/Dockerfile
-    stdin_open: true
-    tty: true
-    networks:
-      - app-net
-    volumes:
-      # Bind-mount the models directory — populate before first run (see tts/README.md)
-      - ./tts/models:/models:ro
-      # Output WAV files land here on the host
-      - ./tts/output:/output
-    environment:
-      - SHERPA_VITS_MODEL=/models/vits-piper-zh_CN-huayan-medium/zh_CN-huayan-medium.onnx
-      - SHERPA_TOKENS=/models/vits-piper-zh_CN-huayan-medium/tokens.txt
-      - SHERPA_LEXICON=
-      - SHERPA_DATA_DIR=/models/vits-piper-zh_CN-huayan-medium/espeak-ng-data
-      - SHERPA_SPEED=1.0
-      - SHERPA_SPEAKER_ID=0
+    
 
 networks:
   app-net:
