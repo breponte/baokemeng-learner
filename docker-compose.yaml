@@ -58,8 +58,8 @@ services:
     networks:
       - app-net
     volumes:
-      - ./tts/model:/app/tts/model
-      - ./tts/sherpa-onnx:/app/tts/sherpa-onnx
+      - ./tts/input:/app/input
+      - ./tts/output:/app/output
 
 networks:
   app-net:
