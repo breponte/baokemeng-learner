@@ -3,6 +3,7 @@ tts/model/*
 tts/output/*
 ocr/capture/*
 ocr/output/*
-venv
+**/venv/
+**/__pycache__/
 ocr/input/*
 ocr/output/*

@@ -1,4 +1,14 @@
 services:
+  ocr:
+    build:
+      context: .
+      dockerfile: ocr/Dockerfile
+    networks:
+      - app-net
+    volumes:
+      - ./ocr/input:/app/input
+      - ./ocr/output:/app/output
+
   translate:
     build:
       context: .
@@ -42,7 +52,14 @@ services:
     command: gcloud auth application-default login
 
   tts:
-    
+    build:
+      context: .
+      dockerfile: tts/Dockerfile
+    networks:
+      - app-net
+    volumes:
+      - ./tts/model:/app/tts/model
+      - ./tts/sherpa-onnx:/app/tts/sherpa-onnx
 
 networks:
   app-net:
