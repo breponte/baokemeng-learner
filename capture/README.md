@@ -1,0 +1,1 @@
+Within capture/@README.md , create documentation outlining Overview, How it Works, Setup, and Resources for the capture implementation in Rust. Use the ocr/@README.md and tts/@README.md as examples.

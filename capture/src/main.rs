@@ -12,7 +12,7 @@ fn normalized(filename: String) -> String {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all monitors and create the target directory for saving images
     let monitors = Monitor::all()?;
-    dir::create_all("target/monitors", true).unwrap();
+    dir::create_all("target/captures", true).unwrap();
     
     // Find the primary monitor
     let monitor = monitors
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Save the captured region to a file
     image
         .save(format!(
-            "target/monitors/monitor-{}-region.png",
+            "target/captures/monitor-{}-region.png",
             normalized(monitor.friendly_name().unwrap())
         ))
         .unwrap();
