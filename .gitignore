@@ -11,3 +11,7 @@ tts/model/*
 
 ocr/capture/*
 ocr/output/*
+
+capture/target
+**/*.rs.bk
+*.pdb
