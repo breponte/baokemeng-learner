@@ -15,3 +15,5 @@ ocr/output/*
 capture/target
 **/*.rs.bk
 *.pdb
+
+overlay/build
