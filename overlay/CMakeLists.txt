@@ -5,10 +5,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Executables and shared libs land in the same directory (set BEFORE SDL is added).
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 include(FetchContent)
 
 # Disable SDL's OpenGL ES/EGL backend.
 set(SDL_OPENGLES OFF CACHE BOOL "Disable OpenGL ES support" FORCE)
+set(SDL_SHARED ON  CACHE BOOL "" FORCE)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     SDL3
@@ -21,3 +27,20 @@ FetchContent_MakeAvailable(SDL3)
 
 add_executable(hello src/hello.cpp)
 target_link_libraries(hello PRIVATE SDL3::SDL3)
+
+# Loader looks next to the executable, for both build tree and install tree.
+if(APPLE)
+    set(_origin "@loader_path")
+elseif(UNIX)
+    set(_origin "$ORIGIN")
+endif()
+if(_origin)
+    set_target_properties(hello PROPERTIES
+        BUILD_RPATH   "${_origin}"
+        INSTALL_RPATH "${_origin}")
+endif()
+
+# Shipping: exe and SDL side by side.
+install(TARGETS hello SDL3-shared
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION bin)
