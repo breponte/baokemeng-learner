@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(hello LANGUAGES C)
+project(hello LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
@@ -15,5 +19,5 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
-add_executable(hello src/hello.c)
+add_executable(hello src/hello.cpp)
 target_link_libraries(hello PRIVATE SDL3::SDL3)
