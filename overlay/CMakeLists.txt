@@ -11,10 +11,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include(FetchContent)
 
-# Disable SDL's OpenGL ES/EGL backend.
 set(SDL_OPENGLES OFF CACHE BOOL "Disable OpenGL ES support" FORCE)
 set(SDL_SHARED ON  CACHE BOOL "" FORCE)
 set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)   # build bundled FreeType/HarfBuzz
 
 FetchContent_Declare(
     SDL3
@@ -22,11 +22,16 @@ FetchContent_Declare(
     GIT_TAG release-3.4.16
     GIT_SHALLOW TRUE
 )
-
-FetchContent_MakeAvailable(SDL3)
+FetchContent_Declare(
+    SDL3_ttf
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+    GIT_TAG release-3.2.2
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(SDL3 SDL3_ttf)
 
 add_executable(hello src/hello.cpp)
-target_link_libraries(hello PRIVATE SDL3::SDL3)
+target_link_libraries(hello PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 
 # Loader looks next to the executable, for both build tree and install tree.
 if(APPLE)
@@ -40,7 +45,14 @@ if(_origin)
         INSTALL_RPATH "${_origin}")
 endif()
 
-# Shipping: exe and SDL side by side.
-install(TARGETS hello SDL3-shared
+# Copy assets into the build tree after each build
+add_custom_command(TARGET hello POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:hello>/assets)
+
+# Shipping: exe and libraries side by side.
+install(TARGETS hello SDL3-shared SDL3_ttf-shared
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION bin)
+install(DIRECTORY assets/ DESTINATION bin/assets)
