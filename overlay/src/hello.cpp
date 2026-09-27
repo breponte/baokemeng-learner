@@ -4,10 +4,14 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-#define EXIT_FAILURE_CREATE_WINDOW      1
-#define EXIT_FAILURE_CREATE_SURFACE     2
-#define EXIT_FAILURE_LOAD_TEXT_ENGINE   3
-#define EXIT_FAILURE_OPEN_FONT_PATH     4
+#define INITIAL_WINDOW_WIDTH 640
+#define INITIAL_WINDOW_HEIGHT 480
+
+#define EXIT_FAILURE_INITIALIZATION     1
+#define EXIT_FAILURE_WINDOW_RENDERER    2
+#define EXIT_FAILURE_CREATE_SURFACE     3
+#define EXIT_FAILURE_LOAD_TEXT_ENGINE   4
+#define EXIT_FAILURE_OPEN_FONT_PATH     5
 
 /**
  * Resolves a path relative to the executable's base directory.
@@ -22,34 +26,41 @@ static std::string asset_path(const std::string& rel) {
 
 int main(int argc, char *argv[]) {
     // Initialize libraries
-    if (!SDL_Init(SDL_INIT_VIDEO)) { std::cerr << SDL_GetError() << "\n"; return 1; }
-    if (!TTF_Init())               { std::cerr << SDL_GetError() << "\n"; return 1; }
-
-    // Initialize window and loop variables
-    SDL_Window *window = nullptr;
-    bool done = false;
-    int width = 640, height = 360;
-
-    // Create window
-    window = SDL_CreateWindow(
-        "宝可梦学习者",
-        width,
-        height,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_TRANSPARENT
-        // SDL_WINDOW_NOT_FOCUSABLE
-    );
-
-    // Create window error handling
-    if (window == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create window: %s\n", SDL_GetError());
-        return EXIT_FAILURE_CREATE_WINDOW;
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not initialize video: %s\n", SDL_GetError());
+        return EXIT_FAILURE_INITIALIZATION;
     }
+    if (!TTF_Init()) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not initialize TTF: %s\n", SDL_GetError());
+        return EXIT_FAILURE_INITIALIZATION;
+    }
+
+    // Initialize window variables
+    SDL_Window *window = nullptr;
+    int width = INITIAL_WINDOW_WIDTH, height = INITIAL_WINDOW_HEIGHT;
+    SDL_Renderer *renderer = nullptr;
+
+    // Create window and renderer
+    if (!SDL_CreateWindowAndRenderer("宝可梦学习者",
+                                    width,
+                                    height,
+                                    SDL_WINDOW_RESIZABLE |
+                                        SDL_WINDOW_ALWAYS_ON_TOP |
+                                        SDL_WINDOW_TRANSPARENT,
+                                        // SDL_WINDOW_NOT_FOCUSABLE
+                                    &window,
+                                    &renderer)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't create window/renderer: %s", SDL_GetError());
+        return EXIT_FAILURE_WINDOW_RENDERER;
+    }
+    SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     // Initialize graphical surfaces
     SDL_Surface *surface = SDL_GetWindowSurface(window);
     TTF_TextEngine *textEngine = TTF_CreateSurfaceTextEngine();
     std::string fontPath = asset_path("assets/courier.ttf");
     TTF_Font *ttfFont = TTF_OpenFont(fontPath.c_str(), 32.0f);
+    SDL_FRect subwindow;
 
     // Graphical surfaces error handling
     if (surface == nullptr) {
@@ -82,20 +93,38 @@ int main(int argc, char *argv[]) {
      * and presents the updated surface.
      *
      * @param surface Reassigned to the window's current surface (input value discarded).
-     * @param text    The prepared TTF_Text object to render.
+     * @param textRaw The string to render.
      */
-    auto drawText = [&window](SDL_Surface *surface, TTF_Text *text) -> void {
-        surface = SDL_GetWindowSurface(window);
-        SDL_ClearSurface(surface, 0, 0, 0, 0);
-        TTF_DrawSurfaceText(text, 32, 32, surface);
-        SDL_UpdateWindowSurface(window);
-    };
+    auto drawText = [&renderer, &text](SDL_Surface *surface, std::string textRaw) -> void {
+        if (!TTF_SetTextString(
+            text, 
+            textRaw.c_str(), 
+            textRaw.length())
+        ) {
+            std::cerr << "Failed to create text: " << SDL_GetError() << std::endl;
+            return;
+        }
 
-    drawText(surface, text);
+        SDL_ClearSurface(surface, 0, 0, 0, SDL_ALPHA_TRANSPARENT);
+        TTF_DrawSurfaceText(text, 32, 32, surface);
+        SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_RenderTexture(renderer, texture, NULL, NULL);
+    };
+    
+    drawText(surface, textRaw);
+
+    subwindow.x = subwindow.y = 10;
+    subwindow.w = subwindow.h = 100 + (100 * 1);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
+    SDL_RenderRect(renderer, &subwindow);
+    SDL_RenderPresent(renderer);
 
     // Main loop
     SDL_Event event;
+    bool done = false;
     while (!done && SDL_WaitEvent(&event)) {
+        SDL_RenderPresent(renderer);
+
         switch (event.type) {
         case SDL_EVENT_QUIT:            // Quit the game
             done = true;
@@ -106,22 +135,16 @@ int main(int argc, char *argv[]) {
             width = event.window.data1;
             height = event.window.data2;
 
-            // Reference for TTF_CreateText: https://wiki.libsdl.org/SDL3_ttf/TTF_CreateText
             textRaw = std::to_string(width) + ", " + std::to_string(height);
-            if (!TTF_SetTextString(
-                    text, 
-                    textRaw.c_str(), 
-                    textRaw.length())
-                ) {
-                std::cerr << "Failed to create text: " << SDL_GetError() << std::endl;
-                return 1;
-            }
-            drawText(surface, text);
+            drawText(surface, textRaw);
             break;
 
         default:
             break;
         }
+
+        SDL_RenderRect(renderer, &subwindow);
+        SDL_RenderPresent(renderer);
     }
 
     // Clean up gracefully
