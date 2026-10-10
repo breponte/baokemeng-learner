@@ -13,6 +13,8 @@
 #define EXIT_FAILURE_LOAD_TEXT_ENGINE   4
 #define EXIT_FAILURE_OPEN_FONT_PATH     5
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 /**
  * Resolves a path relative to the executable's base directory.
  *
@@ -143,18 +145,18 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
                 case SDLK_L:
-                    subwindow.w += 10 * invertControls;
+                    subwindow.w = MAX(0, subwindow.w + (10 * invertControls));
                     break;
                 case SDLK_H:
-                    subwindow.w -= 10 * invertControls;
-                    subwindow.x += 10 * invertControls;
+                    subwindow.x = subwindow.w > 0 || invertControls < 0 ? subwindow.x + (10 * invertControls) : subwindow.x;
+                    subwindow.w = MAX(0, subwindow.w - (10 * invertControls));
                     break;
                 case SDLK_J:
-                    subwindow.h += 10 * invertControls;
+                    subwindow.h = MAX(0, subwindow.h + (10 * invertControls));
                     break;
                 case SDLK_K:
-                    subwindow.h -= 10 * invertControls;
-                    subwindow.y += 10 * invertControls;
+                    subwindow.y = subwindow.h > 0 || invertControls < 0 ? subwindow.y + (10 * invertControls) : subwindow.y;
+                    subwindow.h = MAX(0, subwindow.h - (10 * invertControls));
                     break;
             }
             break;
@@ -165,8 +167,6 @@ int main(int argc, char *argv[]) {
             }
             break;
         }
-
-        //std::cout << "invertControls: " << invertControls << std::endl;
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
         textRaw = std::to_string((int)subwindow.w) + ", " + std::to_string((int)subwindow.h);
