@@ -62,7 +62,8 @@ int main(int argc, char *argv[]) {
     TTF_TextEngine *textEngine = TTF_CreateSurfaceTextEngine();
     std::string fontPath = asset_path("assets/courier.ttf");
     TTF_Font *ttfFont = TTF_OpenFont(fontPath.c_str(), 32.0f);
-    SDL_FRect subwindow;
+    SDL_FRect textBoxFrame;
+    SDL_FRect popupFrame;
 
     // Graphical surfaces error handling
     if (surface == nullptr) {
@@ -79,12 +80,14 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE_OPEN_FONT_PATH;
     }
     
-    subwindow.x = subwindow.y = 10;subwindow.x = subwindow.y = 10;
-    subwindow.w = subwindow.h = 100 + (100 * 1);
+    textBoxFrame.x = textBoxFrame.y = 10; textBoxFrame.x = textBoxFrame.y = 10;
+    textBoxFrame.w = textBoxFrame.h = 100 + (100 * 1);
+    popupFrame.x = popupFrame.y = 10; popupFrame.x = popupFrame.y = 10;
+    popupFrame.w = popupFrame.h = 100 + (100 * 1);
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
 
     // Create text artifact from window dimensions
-    std::string textRaw = std::to_string((int)subwindow.w) + ", " + std::to_string((int)subwindow.h);
+    std::string textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
     TTF_Text *text = TTF_CreateText(
         textEngine,
         ttfFont,
@@ -117,7 +120,7 @@ int main(int argc, char *argv[]) {
         SDL_RenderTexture(renderer, texture, NULL, NULL);
     };
     
-    SDL_RenderRect(renderer, &subwindow);
+    SDL_RenderRect(renderer, &textBoxFrame);
     renderText(surface, textRaw);
 
     SDL_RenderPresent(renderer);
@@ -145,18 +148,18 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
                 case SDLK_L:
-                    subwindow.w = MAX(0, subwindow.w + (10 * invertControls));
+                    textBoxFrame.w = MAX(0, textBoxFrame.w + (10 * invertControls));
                     break;
                 case SDLK_H:
-                    subwindow.x = subwindow.w > 0 || invertControls < 0 ? subwindow.x + (10 * invertControls) : subwindow.x;
-                    subwindow.w = MAX(0, subwindow.w - (10 * invertControls));
+                    textBoxFrame.x = textBoxFrame.w > 0 || invertControls < 0 ? textBoxFrame.x + (10 * invertControls) : textBoxFrame.x;
+                    textBoxFrame.w = MAX(0, textBoxFrame.w - (10 * invertControls));
                     break;
                 case SDLK_J:
-                    subwindow.h = MAX(0, subwindow.h + (10 * invertControls));
+                    textBoxFrame.h = MAX(0, textBoxFrame.h + (10 * invertControls));
                     break;
                 case SDLK_K:
-                    subwindow.y = subwindow.h > 0 || invertControls < 0 ? subwindow.y + (10 * invertControls) : subwindow.y;
-                    subwindow.h = MAX(0, subwindow.h - (10 * invertControls));
+                    textBoxFrame.y = textBoxFrame.h > 0 || invertControls < 0 ? textBoxFrame.y + (10 * invertControls) : textBoxFrame.y;
+                    textBoxFrame.h = MAX(0, textBoxFrame.h - (10 * invertControls));
                     break;
             }
             break;
@@ -169,9 +172,10 @@ int main(int argc, char *argv[]) {
         }
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
-        textRaw = std::to_string((int)subwindow.w) + ", " + std::to_string((int)subwindow.h);
+        textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
         renderText(surface, textRaw);
-        SDL_RenderRect(renderer, &subwindow);
+        SDL_RenderRect(renderer, &textBoxFrame);
+        SDL_RenderRect(renderer, &popupFrame);
         SDL_RenderPresent(renderer);
     }
 
