@@ -65,6 +65,8 @@ int main(int argc, char *argv[]) {
     TTF_Font *ttfFont = TTF_OpenFont(fontPath.c_str(), 32.0f);
     SDL_FRect textBoxFrame;
     SDL_FRect popupFrame;
+    SDL_FRect cursor;       // dummy frame for intersections with other frames
+    SDL_FRect intersection;
 
     // Graphical surfaces error handling
     if (surface == nullptr) {
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]) {
     textBoxFrame.w = textBoxFrame.h = 100 + (100 * 1);
     popupFrame.x = popupFrame.y = 10; popupFrame.x = popupFrame.y = 10;
     popupFrame.w = popupFrame.h = 100 + (100 * 1);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
+    cursor.w = cursor.h = 10;
 
     // Create text artifact from window dimensions
     std::string textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
@@ -121,6 +123,7 @@ int main(int argc, char *argv[]) {
         SDL_RenderTexture(renderer, texture, NULL, NULL);
     };
     
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
     SDL_RenderRect(renderer, &textBoxFrame);
     renderText(surface, textRaw);
 
@@ -180,16 +183,23 @@ int main(int argc, char *argv[]) {
         
         float mouseX = -1.f, mouseY = -1.f;
         SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState( &mouseX, &mouseY );
-        if (mouseButtons & SDL_BUTTON_LMASK) {
+        if (mouseButtons & SDL_BUTTON_RMASK) {
             popupFrame.x = CLIP(mouseX, 0, windowWidth-1);
             popupFrame.y = CLIP(mouseY, 0, windowHeight-1);
         }
+        cursor.x = mouseX - (cursor.w / 2);
+        cursor.y = mouseY - (cursor.h / 2);
+
+        bool hasIntersection = SDL_GetRectIntersectionFloat(&popupFrame, &cursor, &intersection);
+        std::cout << hasIntersection << std::endl;
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
         textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
         renderText(surface, textRaw);
         SDL_RenderRect(renderer, &textBoxFrame);
         SDL_RenderRect(renderer, &popupFrame);
+        SDL_RenderRect(renderer, &cursor);
+        SDL_RenderRect(renderer, &intersection);
         SDL_RenderPresent(renderer);
     }
 
