@@ -14,6 +14,7 @@
 #define EXIT_FAILURE_OPEN_FONT_PATH     5
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define CLIP(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
 
 /**
  * Resolves a path relative to the executable's base directory.
@@ -39,13 +40,13 @@ int main(int argc, char *argv[]) {
 
     // Initialize window variables
     SDL_Window *window = nullptr;
-    int width = INITIAL_WINDOW_WIDTH, height = INITIAL_WINDOW_HEIGHT;
+    int windowWidth = INITIAL_WINDOW_WIDTH, windowHeight = INITIAL_WINDOW_HEIGHT;
     SDL_Renderer *renderer = nullptr;
 
     // Create window and renderer
     if (!SDL_CreateWindowAndRenderer("宝可梦学习者",
-                                    width,
-                                    height,
+                                    windowWidth,
+                                    windowHeight,
                                     SDL_WINDOW_RESIZABLE |
                                         SDL_WINDOW_ALWAYS_ON_TOP |
                                         SDL_WINDOW_TRANSPARENT,
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't create window/renderer: %s", SDL_GetError());
         return EXIT_FAILURE_WINDOW_RENDERER;
     }
-    SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    SDL_SetRenderLogicalPresentation(renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     // Initialize graphical surfaces
     SDL_Surface *surface = SDL_GetWindowSurface(window);
@@ -139,6 +140,12 @@ int main(int argc, char *argv[]) {
             done = true;
             break;
 
+        case SDL_EVENT_WINDOW_RESIZED:  // Type new window dimensions
+            // Of type Sint32
+            windowWidth = event.window.data1;
+            windowHeight = event.window.data2;
+            break;
+
         case SDL_EVENT_KEY_DOWN:        // Key down event
             if (event.key.key == SDLK_SPACE) {
                 invertControls = -1;
@@ -174,8 +181,8 @@ int main(int argc, char *argv[]) {
         float mouseX = -1.f, mouseY = -1.f;
         SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState( &mouseX, &mouseY );
         if (mouseButtons & SDL_BUTTON_LMASK) {
-            popupFrame.x = mouseX;
-            popupFrame.y = mouseY;
+            popupFrame.x = CLIP(mouseX, 0, windowWidth-1);
+            popupFrame.y = CLIP(mouseY, 0, windowHeight-1);
         }
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
