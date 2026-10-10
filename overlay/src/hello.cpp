@@ -76,16 +76,20 @@ int main(int argc, char *argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to open %s: %s\n", fontPath, SDL_GetError());
         return EXIT_FAILURE_OPEN_FONT_PATH;
     }
+    
+    subwindow.x = subwindow.y = 10;subwindow.x = subwindow.y = 10;
+    subwindow.w = subwindow.h = 100 + (100 * 1);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
 
     // Create text artifact from window dimensions
-    std::string textRaw = std::to_string(width) + ", " + std::to_string(height);
+    std::string textRaw = std::to_string((int)subwindow.w) + ", " + std::to_string((int)subwindow.h);
     TTF_Text *text = TTF_CreateText(
         textEngine,
         ttfFont,
         textRaw.c_str(),
         textRaw.length()
     );
-    
+
     /**
      * Renders the given SDL_ttf text onto the window's surface.
      *
@@ -95,7 +99,7 @@ int main(int argc, char *argv[]) {
      * @param surface Reassigned to the window's current surface (input value discarded).
      * @param textRaw The string to render.
      */
-    auto drawText = [&renderer, &text](SDL_Surface *surface, std::string textRaw) -> void {
+    auto renderText = [&renderer, &text](SDL_Surface *surface, std::string textRaw) -> void {
         if (!TTF_SetTextString(
             text, 
             textRaw.c_str(), 
@@ -111,38 +115,62 @@ int main(int argc, char *argv[]) {
         SDL_RenderTexture(renderer, texture, NULL, NULL);
     };
     
-    drawText(surface, textRaw);
-
-    subwindow.x = subwindow.y = 10;
-    subwindow.w = subwindow.h = 100 + (100 * 1);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
     SDL_RenderRect(renderer, &subwindow);
+    renderText(surface, textRaw);
+
     SDL_RenderPresent(renderer);
 
     // Main loop
     SDL_Event event;
     bool done = false;
+    int invertControls = 1;
     while (!done && SDL_WaitEvent(&event)) {
-        SDL_RenderPresent(renderer);
 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_TRANSPARENT);  /* clear */
+        SDL_RenderClear(renderer);
+        
         switch (event.type) {
         case SDL_EVENT_QUIT:            // Quit the game
             done = true;
             break;
 
-        case SDL_EVENT_WINDOW_RESIZED:  // Type new window dimensions
-            // Of type Sint32
-            width = event.window.data1;
-            height = event.window.data2;
-
-            textRaw = std::to_string(width) + ", " + std::to_string(height);
-            drawText(surface, textRaw);
+        case SDL_EVENT_KEY_DOWN:        // Key down event
+            if (event.key.key == SDLK_SPACE) {
+                invertControls = -1;
+            }
+            switch (event.key.key) {
+                case SDLK_ESCAPE:
+                    done = true;
+                    break;
+                case SDLK_L:
+                    subwindow.w += 10 * invertControls;
+                    break;
+                case SDLK_H:
+                    subwindow.w -= 10 * invertControls;
+                    subwindow.x += 10 * invertControls;
+                    break;
+                case SDLK_J:
+                    subwindow.h += 10 * invertControls;
+                    break;
+                case SDLK_K:
+                    subwindow.h -= 10 * invertControls;
+                    subwindow.y += 10 * invertControls;
+                    break;
+            }
             break;
 
-        default:
+        case SDL_EVENT_KEY_UP:        // Key up event
+            if (event.key.key == SDLK_SPACE) {
+                invertControls = 1;
+            }
             break;
         }
 
+        //std::cout << "invertControls: " << invertControls << std::endl;
+
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
+        textRaw = std::to_string((int)subwindow.w) + ", " + std::to_string((int)subwindow.h);
+        renderText(surface, textRaw);
         SDL_RenderRect(renderer, &subwindow);
         SDL_RenderPresent(renderer);
     }
