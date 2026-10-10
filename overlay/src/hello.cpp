@@ -170,6 +170,13 @@ int main(int argc, char *argv[]) {
             }
             break;
         }
+        
+        float mouseX = -1.f, mouseY = -1.f;
+        SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState( &mouseX, &mouseY );
+        if (mouseButtons & SDL_BUTTON_LMASK) {
+            popupFrame.x = mouseX;
+            popupFrame.y = mouseY;
+        }
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
         textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
