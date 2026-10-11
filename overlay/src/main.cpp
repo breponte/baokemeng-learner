@@ -1,20 +1,5 @@
-#include <iostream>
-#include <string>
-#include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <SDL3_ttf/SDL_ttf.h>
-
-#define INITIAL_WINDOW_WIDTH 640
-#define INITIAL_WINDOW_HEIGHT 480
-
-#define EXIT_FAILURE_INITIALIZATION     1
-#define EXIT_FAILURE_WINDOW_RENDERER    2
-#define EXIT_FAILURE_CREATE_SURFACE     3
-#define EXIT_FAILURE_LOAD_TEXT_ENGINE   4
-#define EXIT_FAILURE_OPEN_FONT_PATH     5
-
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CLIP(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
+#include <utilities.hpp>
 
 /**
  * Resolves a path relative to the executable's base directory.
@@ -63,10 +48,14 @@ int main(int argc, char *argv[]) {
     TTF_TextEngine *textEngine = TTF_CreateSurfaceTextEngine();
     std::string fontPath = asset_path("assets/courier.ttf");
     TTF_Font *ttfFont = TTF_OpenFont(fontPath.c_str(), 32.0f);
+
+    #define NUM_RECTS 2
+
+    SDL_FRect *rects[3];
     SDL_FRect textBoxFrame;
+    rects[0] = &textBoxFrame;
     SDL_FRect popupFrame;
-    SDL_FRect cursor;       // dummy frame for intersections with other frames
-    SDL_FRect intersection;
+    rects[1] = &popupFrame;
 
     // Graphical surfaces error handling
     if (surface == nullptr) {
@@ -87,7 +76,6 @@ int main(int argc, char *argv[]) {
     textBoxFrame.w = textBoxFrame.h = 100 + (100 * 1);
     popupFrame.x = popupFrame.y = 10; popupFrame.x = popupFrame.y = 10;
     popupFrame.w = popupFrame.h = 100 + (100 * 1);
-    cursor.w = cursor.h = 10;
 
     // Create text artifact from window dimensions
     std::string textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
@@ -187,19 +175,19 @@ int main(int argc, char *argv[]) {
             popupFrame.x = CLIP(mouseX, 0, windowWidth-1);
             popupFrame.y = CLIP(mouseY, 0, windowHeight-1);
         }
-        cursor.x = mouseX - (cursor.w / 2);
-        cursor.y = mouseY - (cursor.h / 2);
 
-        bool hasIntersection = SDL_GetRectIntersectionFloat(&popupFrame, &cursor, &intersection);
-        std::cout << hasIntersection << std::endl;
+        // GetRectIntersection comparison?
+        #define GRAB_THRESHOLD 5
+        std::uint8_t mouseoverEdge = getEdgeIntersection(&popupFrame, GRAB_THRESHOLD);
+        std::bitset<4> z(mouseoverEdge);
+        std::cout << "Edge(s): " << z << std::endl;
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);  /* red, full alpha */
         textRaw = std::to_string((int)textBoxFrame.w) + ", " + std::to_string((int)textBoxFrame.h);
         renderText(surface, textRaw);
-        SDL_RenderRect(renderer, &textBoxFrame);
-        SDL_RenderRect(renderer, &popupFrame);
-        SDL_RenderRect(renderer, &cursor);
-        SDL_RenderRect(renderer, &intersection);
+        for (int i = 0; i < NUM_RECTS; i++) {
+            SDL_RenderRect(renderer, rects[i]);
+        }
         SDL_RenderPresent(renderer);
     }
 

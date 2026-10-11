@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(hello LANGUAGES CXX)
+project(main LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,8 +30,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL3 SDL3_ttf)
 
-add_executable(hello src/hello.cpp)
-target_link_libraries(hello PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf)
+add_executable(main src/main.cpp src/utilities.cpp)
+
+target_include_directories(main PRIVATE include)
+
+target_link_libraries(main PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 
 # Loader looks next to the executable, for both build tree and install tree.
 if(APPLE)
@@ -40,19 +43,19 @@ elseif(UNIX)
     set(_origin "$ORIGIN")
 endif()
 if(_origin)
-    set_target_properties(hello PROPERTIES
+    set_target_properties(main PROPERTIES
         BUILD_RPATH   "${_origin}"
         INSTALL_RPATH "${_origin}")
 endif()
 
 # Copy assets into the build tree after each build
-add_custom_command(TARGET hello POST_BUILD
+add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_CURRENT_SOURCE_DIR}/assets
-            $<TARGET_FILE_DIR:hello>/assets)
+            $<TARGET_FILE_DIR:main>/assets)
 
 # Shipping: exe and libraries side by side.
-install(TARGETS hello SDL3-shared SDL3_ttf-shared
+install(TARGETS main SDL3-shared SDL3_ttf-shared
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION bin)
 install(DIRECTORY assets/ DESTINATION bin/assets)
